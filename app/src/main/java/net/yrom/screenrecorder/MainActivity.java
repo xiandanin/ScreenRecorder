@@ -27,7 +27,10 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.hardware.camera2.CameraManager;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodecInfo;
@@ -43,12 +46,17 @@ import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.Range;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.yhao.floatwindow.FloatWindow;
 
 import net.yrom.screenrecorder.view.NamedSpinner;
 
@@ -61,6 +69,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static android.Manifest.permission.RECORD_AUDIO;
+import static android.Manifest.permission.SYSTEM_ALERT_WINDOW;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.os.Build.VERSION_CODES.M;
 import static net.yrom.screenrecorder.ScreenRecorder.AUDIO_AAC;
@@ -124,6 +133,8 @@ public class MainActivity extends Activity {
         mAudioToggle.setChecked(
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
                         .getBoolean(getResources().getResourceEntryName(mAudioToggle.getId()), true));
+
+        showFloatWindow();
     }
 
     @Override
@@ -216,7 +227,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onStart() {
-                mNotifications.recording(0);
+                //mNotifications.recording(0);
             }
 
             @Override
@@ -225,7 +236,7 @@ public class MainActivity extends Activity {
                     startTime = presentationTimeUs;
                 }
                 long time = (presentationTimeUs - startTime) / 1000;
-                mNotifications.recording(time);
+                //mNotifications.recording(time);
             }
         });
         return r;
@@ -389,7 +400,11 @@ public class MainActivity extends Activity {
         mRecorder.start();
         mButton.setText(getString(R.string.stop_recorder));
         registerReceiver(mStopActionReceiver, new IntentFilter(ACTION_STOP));
+
+        showFloatWindow();
+
         moveTaskToBack(true);
+
     }
 
     private void stopRecorder() {
@@ -412,11 +427,25 @@ public class MainActivity extends Activity {
         stopRecorder();
     }
 
+    private void showFloatWindow() {
+        if (FloatWindow.get() != null && FloatWindow.get().isShowing()) {
+            return;
+        }
+        View windowLayout = LayoutInflater.from(this).inflate(R.layout.window, null);
+        FloatWindow
+                .with(getApplicationContext())
+                .setView(windowLayout)
+                .setWidth(1)
+                .setHeight(1)
+                .setDesktopShow(true)
+                .build();
+    }
+
     @TargetApi(M)
     private void requestPermissions() {
         String[] permissions = mAudioToggle.isChecked()
-                ? new String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO}
-                : new String[]{WRITE_EXTERNAL_STORAGE};
+                ? new String[]{WRITE_EXTERNAL_STORAGE, RECORD_AUDIO, SYSTEM_ALERT_WINDOW}
+                : new String[]{WRITE_EXTERNAL_STORAGE, SYSTEM_ALERT_WINDOW};
         boolean showRationale = false;
         for (String perm : permissions) {
             showRationale |= shouldShowRequestPermissionRationale(perm);

@@ -19,8 +19,12 @@ package net.yrom.screenrecorder.view;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
@@ -29,6 +33,11 @@ import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 
 import net.yrom.screenrecorder.R;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * @author yrom
@@ -69,10 +78,32 @@ public class NamedSpinner extends LinearLayout {
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.NamedSpinner, defStyleAttr, defStyleRes);
         final CharSequence[] entries = a.getTextArray(R.styleable.NamedSpinner_android_entries);
         if (entries != null) {
-            final ArrayAdapter<CharSequence> adapter = new ArrayAdapter<>(
-                    context, android.R.layout.simple_spinner_item, entries);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            mSpinner.setAdapter(adapter);
+            if (getId() == R.id.resolution) {
+                WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+                Display display = wm.getDefaultDisplay();
+
+                DisplayMetrics dm = new DisplayMetrics();
+                display.getRealMetrics(dm);
+                List<CharSequence> strings = new ArrayList<CharSequence>(Arrays.asList(entries));
+                strings.add(String.format("%dx%d", dm.heightPixels, dm.widthPixels));
+                strings.sort(new Comparator<CharSequence>() {
+                    @Override
+                    public int compare(CharSequence o1, CharSequence o2) {
+
+                        return Integer.parseInt(o1.toString().split("x")[0]) - Integer.parseInt(o2.toString().split("x")[0]);
+                    }
+                });
+
+                final ArrayAdapter<CharSequence> adapter = new ArrayAdapter<>(
+                        context, android.R.layout.simple_spinner_item, strings.toArray(new CharSequence[0]));
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                mSpinner.setAdapter(adapter);
+            } else {
+                final ArrayAdapter<CharSequence> adapter = new ArrayAdapter<>(
+                        context, android.R.layout.simple_spinner_item, entries);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                mSpinner.setAdapter(adapter);
+            }
         }
         int textAppearance = a.getResourceId(R.styleable.NamedSpinner_android_textAppearance,
                 android.R.style.TextAppearance_DeviceDefault_Medium);

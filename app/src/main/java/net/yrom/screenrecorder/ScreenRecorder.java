@@ -24,12 +24,15 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.Surface;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static android.media.MediaFormat.MIMETYPE_AUDIO_AAC;
@@ -40,7 +43,7 @@ import static android.media.MediaFormat.MIMETYPE_VIDEO_AVC;
  */
 public class ScreenRecorder {
     private static final String TAG = "ScreenRecorder";
-    private static final boolean VERBOSE = false;
+    private static final boolean VERBOSE = true;
     private static final int INVALID_INDEX = -1;
     static final String VIDEO_AVC = MIMETYPE_VIDEO_AVC; // H.264 Advanced Video Coding
     static final String AUDIO_AAC = MIMETYPE_AUDIO_AAC; // H.264 Advanced Audio Coding
@@ -65,6 +68,10 @@ public class ScreenRecorder {
     private LinkedList<Integer> mPendingAudioEncoderBufferIndices = new LinkedList<>();
     private LinkedList<MediaCodec.BufferInfo> mPendingAudioEncoderBufferInfos = new LinkedList<>();
     private LinkedList<MediaCodec.BufferInfo> mPendingVideoEncoderBufferInfos = new LinkedList<>();
+
+    int fps = 0;
+    long fpsUptime = 0L;
+    int frameIndex = 0;
 
     /**
      * @param display for {@link VirtualDisplay#setSurface(Surface)}
@@ -202,6 +209,19 @@ public class ScreenRecorder {
             mPendingVideoEncoderBufferInfos.add(buffer);
             return;
         }
+        if (frameIndex == 0) {
+            fpsUptime = SystemClock.uptimeMillis();
+        }
+        frameIndex++;
+        fps++;
+
+        if (fpsUptime != 0L && SystemClock.uptimeMillis() - fpsUptime >= 1000L) {
+            String format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(System.currentTimeMillis());
+            Log.d(TAG, format+": "+fps+"+fps");
+            fpsUptime = SystemClock.uptimeMillis();
+            fps = 0;
+        }
+
         ByteBuffer encodedData = mVideoEncoder.getOutputBuffer(index);
         writeSampleData(mVideoTrackIndex, buffer, encodedData);
         mVideoEncoder.releaseOutputBuffer(index);
@@ -227,6 +247,7 @@ public class ScreenRecorder {
 
         }
         ByteBuffer encodedData = mAudioEncoder.getOutputBuffer(index);
+        Log.w(TAG, "muxAudio: "+mAudioTrackIndex+"--->"+buffer.size+"_--->"+encodedData);
         writeSampleData(mAudioTrackIndex, buffer, encodedData);
         mAudioEncoder.releaseOutputBuffer(index);
         if ((buffer.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
@@ -385,7 +406,7 @@ public class ScreenRecorder {
             @Override
             public void onOutputBufferAvailable(BaseEncoder codec, int index, MediaCodec.BufferInfo info) {
                 if (VERBOSE)
-                    Log.i(TAG, "[" + Thread.currentThread().getId() + "] AudioEncoder output buffer available: index=" + index);
+                    Log.i(TAG, "[" + Thread.currentThread().getId() + "] AudioEncoder output buffer available: index=" + index+"--->"+info.size);
                 try {
                     muxAudio(index, info);
                 } catch (Exception e) {

@@ -26,6 +26,7 @@
         <item>16000</item>
         <item>20000</item>
         <item>25000</item>
+        <item>100000</item>
     </string-array>
     <string-array name="video_framerates">
         <item>15</item>

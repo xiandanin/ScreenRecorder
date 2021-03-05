@@ -7,8 +7,17 @@ android {
         applicationId "net.yrom.screenrecorder.demo"
         minSdkVersion 21
         targetSdkVersion 28
-        versionCode 15
-        versionName '2.4.2'
+        versionCode 17
+        versionName '2.4.4'
+    }
+
+
+    android.applicationVariants.all { variant ->
+        def name = project.rootProject.name
+        variant.outputs.all {
+            outputFileName = String.format("%s-%s_%s.apk", name, buildType.name, versionName)
+        }
+
     }
 
     compileOptions {
@@ -21,4 +30,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+
+}
+dependencies {
+    implementation 'com.github.yhaolpz:FloatWindow:1.0.9'
 }
